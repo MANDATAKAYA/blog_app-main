@@ -1,0 +1,179 @@
+①モデル、コントローラー、マイグレーションファイルを作成する
+モデルはMVCの中でM(モデル)を指します。モデルは主にDBと連携をする役割を持っています。
+ターミナルにて、php artisan make:model モデル名 -mcを打つと
+modelフォルダの中にモデル機能を持つファイルを作成させます
+モデルフォルダにTodoListController.phpというモデルが出現します
+末尾に-mcと打つことで、マイグレーションファイル、コントローラーを作成させます。
+
+マイグレーションファイルとはテーブルの定義を行う役割をします。作成後、Artisan migrate コマンドを実行すると、Laravel がその内容をもとに自動でデータベースを構成します
+
+②マイグレーションファイル作成
+次に、テーブルの定義をしていきます。
+public function up()
+{
+  Schema::create('todo_lists', function (Blueprint $table) {
+    $table->id();
+    $table->timestamps();
+  });
+}
+up関数はDBに新しいカラムやテーブルを作成するための処理を行う効果を持ちます。
+schmeはテーブルより大規模な枠組みを指します。DBのことです。
+デフォルトでは、id,timestampがカラム名として生成されています。
+datatime型は日付と時刻を同時に表示します。サポートしている範囲は '1000-01-01 00:00:00' から '9999-12-31 23:59:59' です。
+TIMESTAMP データ型は、日付と時間の両方の部分を含む値に使用されます。 TIMESTAMP には、'1970-01-01 00:00:01' UTC から '2038-01-19 03:14:07' UTC の範囲があります
+※timestamp型は2038年までしか対応できません。
+
+デフォルトのup関数に$table->string('name', 100);を追記しましょう。
+php artisan migrateをターミナルで打つことで、DBにテーブルが自動で作成されます。
+
+③ダミーデータを登録しよう
+ダミーデータを登録する際に「シーダー」という機能を使います。
+php artisan make:seeder TodoListSeederをターミナルに打ちましょう。
+seederというファイルに TodoListSeederというシーダーファイルを作成させます。
+
+<?php
+namespace Database\Seeders;
+use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB; //追記
+class TodoListSeeder extends Seeder
+{
+  /**
+   * Run the database seeds.
+   *
+   * @return void
+   */
+  public function run()
+  {
+    DB::table('todo_lists')->insert(//追記
+      [
+        [
+          'name' => 'テスト1',//追記
+          'created_at' => now(),//追記
+          'updated_at' => now(),//追記
+        ],
+        [
+          'name' => 'テスト2',//追記
+          'created_at' => now(),//追記
+          'updated_at' => now(),//追記
+        ],
+        [
+          'name' => 'テスト3',//追記
+          'created_at' => now(),//追記
+          'updated_at' => now(),//追記
+        ],
+      ]
+    );
+  }
+}
+シーダーファイルが上記になります。解説を書いてみます。
+namespace Database\Seeders;namespaceは日本語で名前空間と読みます。
+同じ関数やクラス名の場合、エラーが起こります。今回見るとnamespace Database\Seedersと指定しています。これはサブ名前空間と呼ばれています。
+冒頭に指定しないとエラーが起こります。
+use Illuminate\Database\Seeder;はuseを指定しています。
+関数を呼び出す際に、長い名前を毎回書くのが大変のため、use Illuminate\Database\Seeder as Seeder;と指定するとSeeder\関数名();等簡単に呼び出すことができます。
+as を今回使用しなかったので、自動的にSeeder\関数名();で呼び出すことができる。
+DB::table('todo_lists')->insert(//追記
+      [
+        [
+          'name' => 'テスト1',//追記
+          'created_at' => now(),//追記
+          'updated_at' => now(),//追記
+        ]),
+こちらでテーブルのしーだデータを作成します。配列で作成してください。
+DB::table('todo_lists')->insertでtodo_listsというテーブルにデータをインサート(追加)してくださいという命令になります。
+
+④runメソッドの実行
+databaseSeeder.phpファイルにて、run関数を実行します。
+public function run()
+{
+  $this->call([
+    TodoListSeeder::class
+  ]);
+}
+hp artisan db:seed --class=TodoListSeederをターミナル実行させます。するとシーだデータが実行されました。
+
+
+⑤コントローラーの作成
+コントローラー内に書く処理としては、先ほど作成したモデルクラスの、「Todolist」から「データを取得する処理」を書き、「取得した値をビューに渡す処理」を書きます。
+モデルはDBと連携する役割があります。
+<?php
+ 
+namespace App\Http\Controllers;
+ 
+use Illuminate\Http\Request;
+use App\Models\TodoList;//追記
+ 
+class TodoListController extends Controller
+{
+  public function index(Request $request)//追記
+  {
+    $todo_lists = TodoList::all();//追記
+ 
+    return view('todo_list.index', ['todo_lists'=> $todo_lists]);//追記
+  }
+}
+public function index(Request $request)でindexメソッドを用意します。
+$todo_lists = TodoList::all();でTodoListという名前のテーブルデータを全て取得する意味です。
+return view('todo_list.index', ['todo_lists', $todo_lists]);
+viewメソッドの第一引数には、「どのビューファイルか」を指定します。
+書き方は、view(‘フォルダ名.ファイル名’)となります。
+また、ビューに値を渡すときは、このように変数名と値がペアになった連想配列を第2引数に設定します。
+※このときはまだindexファイルはないので次で作成させます。
+
+⑥viewファイル作成
+<!DOCTYPE html>
+<html lang="ja">
+ 
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>テスト</title>
+</head>
+ 
+<body>
+ 
+    @if ($todo_lists->isNotEmpty())//もし、コレクションが空のtodo_listsでない場合
+        <ul>
+            @foreach ($todo_lists as $item)
+                <li>
+                    {{ $item->name }}
+                </li>
+            @endforeach
+        </ul>
+    @endif
+ 
+</body>
+ 
+</html>
+
+isNotEmpty()関数は、todo_listsのテーブルが空でない場合を指します
+
+⑦ルーティング
+Route::get('/list', [TodoListController::class, 'index']);
+Route::get( アドレス , [コントローラーの名前::class , メソッド名] );
+
+以上MVCの完成です。※php artisan migrate:fresh --seedは改めてデータを登録する際に扱うコマンドですので覚えておいてください。
+
+- Todoアプリを作成しよう編 -
+①テーブルを作ろう
+php artisan make:migration create_tasks_tableをターミナルで打ち、マイグレーションファイルを作成します。
+以前は、モデルやコントローラー同時に作成しましたが、今回はマイグレーションのみ作成しています
+Schema::create('tasks', function (Blueprint $table) {
+  $table->id();
+  $table->string('name', 100);
+  $table->boolean('status')->default(false);
+  $table->timestamp('updated_at')->useCurrent()->nullable();
+  $table->timestamp('created_at')->useCurrent()->nullable();
+
+   $table->boolean('status')->default(false);
+    $table->timestamp('created_at')->useCurrent()->nullable();で現在の時刻を表します。
+
+②モデルを作成する
+php artisan make:model Taskをターミナルで打ちこむことで、モデルを作成できます。
+
+③リソースコントローラーを作成する
+そもそもルートを各自作成していくことが難しい。そのため、
+php artisan make:controller TaskController --resource末尾にresourceを指定することで、リソースコントローラー作成できる。
+TaskController.phpが作成されます。内容を見ると、index、create、store、show、edit、update、destroyというメソッドがあらかじめ作成されています。
